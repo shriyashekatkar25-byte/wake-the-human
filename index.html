@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wake the Human · APM Lab</title>
+<meta name="description" content="When should an always-on ops agent page a human? An inverse-CDF Monte Carlo prototype by Shriya Shekatkar. All data simulated.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Big+Shoulders+Display:wght@700;800&family=Caveat:wght@600;700&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* pin 1 · poster */
+  --moss:#2f5a07; --moss-deep:#244705; --butter:#f4f1a6;
+  /* pin 2 · kraft note */
+  --kraft:#d8cbb0; --paper:#ece3cf; --ink-red:#a8261e; --ink:#2a1f17; --ink-soft:#4d3f33;
+  /* pin 3 · iridescent */
+  --lilac:#cdb8ec; --blush:#f6b9d4; --gold:#e9c27b; --aqua:#aee8e3; --holo-ink:#2b1840;
+  /* pin 4 · pond */
+  --pond:#16261c; --pond-2:#1f3326; --pad:#4f6c3f; --lotus:#f3a5b8; --lotus-2:#ffd4de; --cream:#f3efc6;
+  --grain:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.6 "DM Sans",system-ui,sans-serif;overflow-x:hidden}
+a{color:var(--ink-red)}
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px}
+h2{font-family:"Archivo Black",sans-serif;font-weight:400;font-size:clamp(26px,4.4vw,42px);line-height:1.05;margin:0 0 6px;letter-spacing:-.01em}
+.kicker{font:700 12px/1 "DM Sans";letter-spacing:.16em;text-transform:uppercase;color:var(--ink-red)}
+section{padding:56px 0}
+.skip{position:absolute;left:-999px}.skip:focus{left:16px;top:16px;background:#fff;padding:8px;z-index:9}
+
+/* ---------- HERO: pin 1 — forest-green poster, butter-yellow stacked grotesk ---------- */
+.hero{background:var(--moss);color:var(--butter);position:relative;overflow:hidden;padding:0}
+.hero::after{content:"";position:absolute;inset:0;background:var(--grain);opacity:.18;mix-blend-mode:multiply;pointer-events:none}
+.stack{font-family:"Archivo Black",sans-serif;text-transform:uppercase;font-size:clamp(28px,7.4vw,84px);line-height:.98;letter-spacing:.005em;margin:0;padding:40px 0 8px}
+.stack span{display:block;white-space:nowrap}
+.stack .echo{opacity:.22}
+.stack .echo.e2{opacity:.38}.stack .echo.e3{opacity:.6}
+.stack .main{opacity:1}
+@media (prefers-reduced-motion:no-preference){
+  .stack .echo{animation:drift 7s ease-in-out infinite alternate}
+  .stack .echo:nth-child(2){animation-delay:-2s}.stack .echo:nth-child(3){animation-delay:-4s}
+  @keyframes drift{from{transform:translateX(0)}to{transform:translateX(-14px)}}
+}
+.hero-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:28px;align-items:end;padding:8px 0 48px;position:relative;z-index:1}
+.hero p{margin:0 0 10px;font-size:18px;max-width:560px}
+.hero .launch{display:inline-block;background:var(--butter);color:var(--moss-deep);padding:8px 12px;border-radius:4px;font-weight:700;font-size:15px;text-decoration:none;margin:6px 0 14px}
+.hero .launch:hover{background:#fff}
+.byline{font:800 20px/1.2 "Big Shoulders Display";letter-spacing:.06em;text-transform:uppercase}
+.byline small{display:block;font:500 14px/1.4 "DM Sans";letter-spacing:.04em;text-transform:none;opacity:.95}
+.hero svg{width:100%;height:auto;max-width:360px;justify-self:end}
+
+/* ---------- CARDS: pin 2 — kraft paper, red handwritten ink, bows ---------- */
+.kraft-bg{background:var(--kraft);position:relative}
+.kraft-bg::before{content:"";position:absolute;inset:0;background:var(--grain);opacity:.12;pointer-events:none}
+.masonry{columns:3 300px;column-gap:18px;margin-top:22px}
+.note{break-inside:avoid;background:var(--paper);border-radius:3px;padding:20px 20px 18px;margin:0 0 18px;box-shadow:0 1px 0 rgba(0,0,0,.08),0 10px 24px -14px rgba(60,40,20,.5);position:relative;display:inline-block;width:100%}
+.note::before{content:"";position:absolute;inset:0;background:var(--grain);opacity:.10;border-radius:3px;pointer-events:none}
+.note h3{font:700 30px/1.05 "Caveat",cursive;color:var(--ink-red);margin:0 0 6px;padding-right:34px}
+.note .bow{position:absolute;top:12px;right:12px;width:30px;height:24px}
+.note ul{margin:6px 0 0;padding-left:18px}.note li{margin:4px 0}
+.squiggle{display:block;width:140px;height:14px;margin:2px 0 8px}
+.pinlabel{font:600 12px/1.3 "DM Sans";color:var(--ink-soft);margin-top:10px;border-top:1px dashed #b9a98c;padding-top:8px}
+table.guard{width:100%;border-collapse:collapse;font-size:14px}
+table.guard td,table.guard th{padding:6px 4px;border-bottom:1px dashed #b9a98c;text-align:left;vertical-align:top}
+table.guard th{font-weight:700}
+
+/* buttons (pin 2) */
+.btn{font:700 15px "DM Sans";background:var(--paper);color:var(--ink-red);border:2px solid var(--ink-red);border-radius:999px;padding:9px 16px;cursor:pointer;box-shadow:3px 3px 0 var(--ink-red);transition:transform .12s, box-shadow .12s}
+.btn:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--ink-red)}
+.btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink-red)}
+.btn:focus-visible,input:focus-visible{outline:3px solid var(--lotus);outline-offset:2px}
+
+/* ---------- SIM ROOM: pin 4 — dark pond, pink lotus, grainy photo, cream condensed caps ---------- */
+.pond{background:radial-gradient(120% 80% at 80% 0%,#2a4532 0%,var(--pond) 60%);color:var(--cream);position:relative;overflow:hidden}
+.pond::before{content:"";position:absolute;inset:0;background:var(--grain);opacity:.35;mix-blend-mode:overlay;pointer-events:none}
+.pond h2{font-family:"Big Shoulders Display";font-weight:800;text-transform:uppercase;font-size:clamp(40px,8vw,88px);line-height:.88;letter-spacing:-.01em;color:var(--cream)}
+.pond .kicker{color:var(--lotus)}
+.pond p{max-width:720px}
+.simgrid{display:grid;grid-template-columns:320px 1fr;gap:22px;margin-top:22px;position:relative;z-index:1}
+.controls{background:rgba(10,20,14,.55);border:1px solid rgba(243,165,184,.35);border-radius:14px;padding:16px}
+.ctl{margin:0 0 14px}
+.ctl label{display:flex;justify-content:space-between;gap:8px;font-size:14px;font-weight:500}
+.ctl output{font:600 14px "JetBrains Mono",monospace;color:var(--lotus-2)}
+.ctl small{display:block;font-size:12px;color:#cfd6c0;line-height:1.35}
+input[type=range]{width:100%;accent-color:var(--lotus);margin:6px 0 2px}
+.toggle{display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.toggle input{width:20px;height:20px;accent-color:var(--lotus);margin-top:2px;flex:none}
+.seedrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.seedrow input{width:90px;font:600 14px "JetBrains Mono";padding:7px 8px;border-radius:8px;border:1px solid var(--lotus);background:var(--pond);color:var(--cream)}
+.pond .btn{background:var(--lotus);color:#2a0f17;border-color:var(--lotus-2);box-shadow:3px 3px 0 #0b140e}
+.stage{min-width:0}
+.canvas-card{background:rgba(8,16,11,.6);border:1px solid rgba(243,239,198,.18);border-radius:14px;padding:12px;margin-bottom:16px}
+.canvas-card h3{font:800 20px/1.1 "Big Shoulders Display";letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px;color:var(--cream)}
+.canvas-card .cap{font-size:13px;color:#d6dcc8;margin:0 0 8px}
+canvas{display:block;width:100%;height:auto;border-radius:8px}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:13px;margin-top:8px;color:#e4e7d6}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+#sweep{width:100%;height:auto;display:block}
+
+/* ---------- KPI BADGES: pin 3 — iridescent lilac/pink/gold glitter ---------- */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:0 0 16px}
+.badge{position:relative;border-radius:18px;padding:14px 14px 12px;color:var(--holo-ink);overflow:hidden;
+  background:conic-gradient(from 210deg at 30% 30%,var(--lilac),var(--blush),var(--gold),var(--aqua),#fff3fb,var(--lilac));
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.6),0 8px 22px -10px rgba(205,184,236,.9)}
+.badge::before{content:"";position:absolute;inset:-40%;background:linear-gradient(115deg,transparent 40%,rgba(255,255,255,.75) 50%,transparent 60%);transform:translateX(-60%)}
+.badge .lbl{position:relative;font:700 11px/1.25 "DM Sans";letter-spacing:.1em;text-transform:uppercase}
+.badge .val{position:relative;font:400 30px/1.05 "Archivo Black";margin:4px 0 2px}
+.badge .tgt{position:relative;font-size:12px;font-weight:500}
+.badge .pill{position:relative;display:inline-block;font:700 11px "DM Sans";padding:2px 8px;border-radius:999px;margin-top:6px;background:rgba(255,255,255,.75)}
+.badge .pill.ok{color:#1d5a1a}.badge .pill.bad{color:#8a1220}
+.badge svg.spark{position:absolute;right:8px;top:8px;width:22px;height:22px}
+
+/* ---------- MEMO (pin 2 paper, handwritten) ---------- */
+.memo{background:var(--paper);border-radius:4px;padding:26px 24px;box-shadow:0 14px 30px -18px rgba(60,40,20,.7);position:relative;max-width:900px;margin:22px auto 0;
+  background-image:repeating-linear-gradient(transparent 0 31px,rgba(168,38,30,.12) 31px 32px)}
+.memo h3{font:700 34px/1 "Caveat";color:var(--ink-red);margin:0 0 4px}
+.memo dl{margin:0}.memo dt{font:700 24px/1.1 "Caveat";color:var(--ink-red);margin-top:14px}
+.memo dd{margin:2px 0 0}
+.vp{margin-top:18px;padding:14px 16px;border:2px dashed var(--ink-red);border-radius:10px;font:700 26px/1.2 "Caveat";color:var(--ink)}
+
+/* ---------- MATH & CODE ---------- */
+.mathgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:22px}
+.formula{font:600 15px "JetBrains Mono",monospace;background:#fff8e8;border-left:4px solid var(--ink-red);padding:8px 10px;margin:8px 0;overflow-x:auto}
+pre{background:var(--pond);color:var(--cream);padding:16px;border-radius:12px;overflow-x:auto;font:400 13px/1.55 "JetBrains Mono",monospace;margin:10px 0 0;border:1px solid var(--pad)}
+.cm{color:#b9c9a8}.kw{color:var(--lotus)}.st{color:var(--gold)}
+.codegrid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
+.codegrid > div{min-width:0}
+
+/* ---------- FOOTER ---------- */
+footer{background:var(--moss-deep);color:var(--butter);padding:28px 0 34px;font-size:14px}
+footer a{color:var(--butter)}
+.credits{font-size:11px;color:#d8d6a0;margin-top:10px;line-height:1.6}
+.credits a{color:#e8e6b0}
+
+@media (max-width:860px){
+  .hero-grid,.simgrid,.mathgrid,.codegrid{grid-template-columns:1fr}
+  .hero svg{justify-self:start;max-width:240px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<a class="skip" href="#sim">Skip to the simulation</a>
+
+<!-- ========== 1. POSTER HERO ========== -->
+<header class="hero" aria-labelledby="h1">
+  <div class="wrap">
+    <h1 class="stack" id="h1" aria-label="I page a human only when it matters.">
+      <span class="main">I wake a human</span>
+      <span class="main">only when it matters.</span>
+    </h1>
+    <div class="hero-grid">
+      <div>
+        <p><b>The question:</b> an always-on ops agent finds every failed job. After how many failed attempts should it page the on-call engineer?</p>
+        <p><b>The answer:</b> the simulation below picks the fastest setting that keeps false pages under 2 a week, and the memo updates with it.</p>
+        <a class="launch" href="https://docs.databricks.com/aws/en/release-notes/product/2026/november" target="_blank" rel="noopener">Mirrors: Genie ZeroOps Beta in Databricks release notes, Nov 12, 2026 ↗</a>
+        <div class="byline">Shriya Shekatkar<small>UCLA · Stats 102C Monte Carlo Methods · APM Lab</small></div>
+      </div>
+      <!-- original drawing: a pager on a lily pad -->
+      <svg viewBox="0 0 360 260" role="img" aria-label="Drawing of a pager resting on a lily pad with a lotus">
+        <ellipse cx="180" cy="210" rx="160" ry="40" fill="#244705"/>
+        <path d="M30 205 Q180 150 330 205 Q180 250 30 205Z" fill="#f4f1a6" opacity=".14"/>
+        <path d="M180 210 L330 200" stroke="#2f5a07" stroke-width="6"/>
+        <g transform="translate(110 70) rotate(-8)">
+          <rect width="150" height="96" rx="16" fill="#f4f1a6"/>
+          <rect x="14" y="14" width="96" height="44" rx="6" fill="#244705"/>
+          <text x="22" y="44" font-family="Archivo Black" font-size="20" fill="#f4f1a6">N=?</text>
+          <circle cx="130" cy="30" r="9" fill="#f3a5b8"/>
+          <rect x="14" y="70" width="34" height="12" rx="6" fill="#2f5a07"/>
+          <rect x="56" y="70" width="34" height="12" rx="6" fill="#2f5a07"/>
+          <rect x="98" y="70" width="34" height="12" rx="6" fill="#2f5a07"/>
+        </g>
+        <g class="buzz" stroke="#f4f1a6" stroke-width="5" stroke-linecap="round" fill="none">
+          <path d="M282 60 q12 12 0 24"/><path d="M298 50 q20 22 0 44"/>
+        </g>
+        <g transform="translate(70 190)">
+          <path d="M0 0 C-14 -26 -6 -46 0 -54 C6 -46 14 -26 0 0Z" fill="#f3a5b8"/>
+          <path d="M0 0 C-30 -14 -34 -34 -30 -42 C-18 -36 -6 -22 0 0Z" fill="#ffd4de"/>
+          <path d="M0 0 C30 -14 34 -34 30 -42 C18 -36 6 -22 0 0Z" fill="#ffd4de"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+</header>
+
+<main>
+<!-- ========== 2. THE DECISION ========== -->
+<section class="kraft-bg" aria-labelledby="dec">
+  <div class="wrap">
+    <div class="kicker">The decision</div>
+    <h2 id="dec">How many failed attempts before the agent pages on-call?</h2>
+    <svg class="squiggle" viewBox="0 0 140 14" aria-hidden="true"><path d="M2 8 Q20 1 38 8 T74 8 T110 8 T138 6" stroke="#a8261e" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>
+    <div class="masonry">
+      <article class="note">
+        <svg class="bow" viewBox="0 0 30 24" aria-hidden="true"><path d="M15 12 C8 2 2 4 3 10 C4 16 10 15 15 12 C20 15 26 16 27 10 C28 4 22 2 15 12Z M15 12 L10 23 M15 12 L20 23" stroke="#a8261e" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
+        <h3>Customer problem</h3>
+        <p>A data platform lead owns 12 workspaces of nightly jobs. Their scheduler already retries. The new agent now spots failures, finds the root cause and drafts a fix. If it pages on every finding, the on-call engineer mutes it in a week. If it pages too late, the CFO's revenue dashboard is stale by breakfast.</p>
+        <div class="pinlabel">Pinned to: who hurts today</div>
+      </article>
+      <article class="note">
+        <svg class="bow" viewBox="0 0 30 24" aria-hidden="true"><path d="M15 12 C8 2 2 4 3 10 C4 16 10 15 15 12 C20 15 26 16 27 10 C28 4 22 2 15 12Z M15 12 L10 23 M15 12 L20 23" stroke="#a8261e" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
+        <h3>Proposed change</h3>
+        <p>Ship a default <b>paging rule</b>: page a human after <b>N consecutive failed attempts</b> of the same job. Optionally add a <b>fast lane</b>: if the agent's diagnosis is deterministic (schema change, bad code push, revoked credential), page on the first failure, since retrying cannot fix it.</p>
+        <div class="pinlabel">Pinned to: the default we ship</div>
+      </article>
+      <article class="note">
+        <svg class="bow" viewBox="0 0 30 24" aria-hidden="true"><path d="M15 12 C8 2 2 4 3 10 C4 16 10 15 15 12 C20 15 26 16 27 10 C28 4 22 2 15 12Z M15 12 L10 23 M15 12 L20 23" stroke="#a8261e" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
+        <h3>Success metric</h3>
+        <p><b>Median time-to-human for real breaks ≤ 45 minutes</b>, measured from first failure to page, per on-call engineer.</p>
+        <div class="pinlabel">Pinned to: north star</div>
+      </article>
+      <article class="note">
+        <svg class="bow" viewBox="0 0 30 24" aria-hidden="true"><path d="M15 12 C8 2 2 4 3 10 C4 16 10 15 15 12 C20 15 26 16 27 10 C28 4 22 2 15 12Z M15 12 L10 23 M15 12 L20 23" stroke="#a8261e" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
+        <h3>Guardrails</h3>
+        <table class="guard">
+          <tr><th>Metric</th><th>Threshold</th></tr>
+          <tr><td>False pages per on-call week</td><td>≤ 2.0</td></tr>
+          <tr><td>Real breaks paged within 60 min</td><td>≥ 95%</td></tr>
+          <tr><td>Noisy weeks (more than 10 pages)</td><td>≤ 10%</td></tr>
+          <tr><td>False pages between 10 p.m. and 7 a.m., per week</td><td>≤ 0.75</td></tr>
+        </table>
+        <div class="pinlabel">Pinned to: what we refuse to break</div>
+      </article>
+      <article class="note">
+        <svg class="bow" viewBox="0 0 30 24" aria-hidden="true"><path d="M15 12 C8 2 2 4 3 10 C4 16 10 15 15 12 C20 15 26 16 27 10 C28 4 22 2 15 12Z M15 12 L10 23 M15 12 L20 23" stroke="#a8261e" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
+        <h3>Stakeholders</h3>
+        <ul>
+          <li><b>On-call data engineers</b>: carry the pager, want sleep.</li>
+          <li><b>Analytics leads</b>: want fresh dashboards by 8 a.m.</li>
+          <li><b>Agent research team</b>: owns diagnosis precision for the fast lane.</li>
+          <li><b>Jobs and pipelines PMs</b>: own retry behavior.</li>
+          <li><b>Field engineering</b>: hears about noisy pages first.</li>
+        </ul>
+        <div class="pinlabel">Pinned to: who signs off</div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 3. LIVE SIMULATION ========== -->
+<section class="pond" id="sim" aria-labelledby="simh">
+  <div class="wrap">
+    <div class="kicker">Live simulation · seeded</div>
+    <h2 id="simh">No noise,<br>no night pages.</h2>
+    <p>Each run simulates 2,000 on-call weeks. Incidents arrive with exponential gaps. A flaky job keeps failing for a geometric number of attempts before it heals. Every draw is made the inverse-CDF way: one uniform number pushed through an inverted CDF.</p>
+    <div class="simgrid">
+      <form class="controls" id="controls" onsubmit="return false" aria-label="Simulation controls">
+        <div class="ctl"><label for="N">Page after N failed attempts <output id="oN"></output></label><input type="range" id="N" min="1" max="8" step="1" value="4"><small>The default we are choosing.</small></div>
+        <div class="ctl"><label for="ws">Workspaces per on-call <output id="ows"></output></label><input type="range" id="ws" min="2" max="40" step="1" value="12"></div>
+        <div class="ctl"><label for="lam">Incidents per workspace per day <output id="olam"></output></label><input type="range" id="lam" min="0.05" max="1.2" step="0.05" value="0.35"><small>Rate of the exponential gaps between findings.</small></div>
+        <div class="ctl"><label for="q">Share that are real breaks <output id="oq"></output></label><input type="range" id="q" min="0.05" max="0.5" step="0.01" value="0.15"></div>
+        <div class="ctl"><label for="p">Chance a flaky job heals on each retry <output id="op"></output></label><input type="range" id="p" min="0.2" max="0.9" step="0.01" value="0.55"><small>Parameter of the geometric failure count.</small></div>
+        <div class="ctl"><label for="rt">Mean attempt runtime (min) <output id="ort"></output></label><input type="range" id="rt" min="2" max="30" step="1" value="6"></div>
+        <div class="ctl"><label for="bo">Retry backoff (min) <output id="obo"></output></label><input type="range" id="bo" min="1" max="30" step="1" value="2"></div>
+        <div class="ctl toggle"><input type="checkbox" id="fast" checked><label for="fast" style="display:block">Fast lane: page at first failure when the diagnosis is deterministic<small>Catches 60% of real breaks; mislabels 2% of flaky ones.</small></label></div>
+        <div class="ctl seedrow"><label for="seed" style="display:inline">Seed</label><input id="seed" type="number" value="1102" inputmode="numeric"><button class="btn" type="button" id="reroll">New seed</button></div>
+      </form>
+      <div class="stage">
+        <div class="kpis" id="kpis" aria-live="polite"></div>
+        <div class="canvas-card">
+          <h3>One simulated week on the pond</h3>
+          <p class="cap">Rows are days, left to right is the clock. The shaded band is 10 p.m. to 7 a.m.</p>
+          <canvas id="week" width="1200" height="520" role="img" aria-label="Timeline of one simulated on-call week showing self-healed incidents, false pages and real pages"></canvas>
+          <div class="legend"><span><i style="background:#7f9c62"></i>Healed quietly (lily pad)</span><span><i style="background:#f3a5b8"></i>False page (pink lotus)</span><span><i style="background:#f3efc6"></i>Real break paged (cream lotus)</span></div>
+        </div>
+        <div class="canvas-card">
+          <h3>Pages per week across 2,000 weeks</h3>
+          <p class="cap">Bars right of the dashed line are noisy weeks.</p>
+          <canvas id="hist" width="1200" height="380" role="img" aria-label="Histogram of total pages per week"></canvas>
+        </div>
+        <div class="canvas-card">
+          <h3>The N trade-off</h3>
+          <p class="cap">Pink: false pages per week (guardrail 2.0). Gold: share of real breaks paged within 60 minutes (guardrail 95%). Rings mark N values that pass every guardrail.</p>
+          <svg id="sweep" viewBox="0 0 600 260" role="img" aria-label="Line chart of false pages and on-time paging versus N"></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 4. DIRECTOR MEMO ========== -->
+<section class="kraft-bg" aria-labelledby="memoh">
+  <div class="wrap">
+    <div class="kicker">Director memo · rewrites itself from the simulation</div>
+    <h2 id="memoh">The note I'd send before the launch review</h2>
+    <div class="memo" id="memo" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- ========== 5. THE MATH ========== -->
+<section aria-labelledby="mathh">
+  <div class="wrap">
+    <div class="kicker">The math, from my Monte Carlo course</div>
+    <h2 id="mathh">Inverse CDF: one uniform number, any shape you need</h2>
+    <div class="mathgrid">
+      <article class="note">
+        <h3>The idea in plain words</h3>
+        <p>A CDF tells you "what share of outcomes are at or below x." Flip it around: pick a random share U between 0 and 1, then ask which x sits at that share. Values of x where the CDF climbs steeply get picked often, flat stretches get picked rarely, which is exactly the right shape.</p>
+        <div class="formula">X = F⁻¹(U),  U ~ Uniform(0,1)</div>
+        <p>It needs only a seeded uniform generator, so the whole simulation replays exactly from one seed. That matters when a VP asks "show me that week again."</p>
+      </article>
+      <article class="note">
+        <h3>Gaps between incidents</h3>
+        <p>If findings arrive at an average rate λ per minute, the waiting time is exponential: F(t) = 1 − e^(−λt). Solving for t:</p>
+        <div class="formula">gap = −ln(1 − U) / λ</div>
+        <p>Product example: with 12 workspaces at 0.35 findings a day, the on-call sees about 29 findings a week. Attempt runtimes use the same trick with mean 6 minutes, so time-to-page is a sum of N such draws plus backoff.</p>
+      </article>
+      <article class="note">
+        <h3>How long a flaky job stays broken</h3>
+        <p>If each retry heals with chance p, the number of failures before the first success is geometric, with P(F ≥ k) = (1 − p)^k. Inverting gives a one-liner:</p>
+        <div class="formula">F = ⌊ ln(1 − U) / ln(1 − p) ⌋</div>
+        <p>A flaky job causes a false page exactly when F ≥ N, so the expected false pages per week are findings × (1 − q) × (1 − p)^N. The page shows this exact number beside the Monte Carlo estimate as a sanity check.</p>
+      </article>
+      <article class="note">
+        <h3>Why simulate if a formula exists?</h3>
+        <p>Means have formulas. The questions a director asks do not: "how often is a week noisy," "what share of real breaks reach a human inside an hour," "how many of the false pages land at night." Those depend on whole distributions of sums and counts, and averaging thousands of simulated weeks answers them directly, with error shrinking like 1/√n.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 6. REAL DATA ========== -->
+<section class="kraft-bg" aria-labelledby="realh">
+  <div class="wrap">
+    <div class="kicker">How I'd run it on real data</div>
+    <h2 id="realh">Fit λ, p and runtimes from run history, then replay the policy</h2>
+    <p style="max-width:760px">Table names are illustrative. The plan: estimate the three inputs from last quarter's job runs, then feed them to the same simulator and replay "would-have-paged" in shadow mode before changing anyone's pager.</p>
+    <div class="codegrid">
+      <div>
+<pre><code><span class="cm">-- 1. Failure streaks per job run chain (SQL)</span>
+<span class="kw">WITH</span> runs <span class="kw">AS</span> (
+  <span class="kw">SELECT</span> workspace_id, job_id, run_start, result_state,
+         <span class="kw">SUM</span>(<span class="kw">CASE WHEN</span> result_state = <span class="st">'SUCCESS'</span> <span class="kw">THEN</span> 1 <span class="kw">ELSE</span> 0 <span class="kw">END</span>)
+           <span class="kw">OVER</span> (<span class="kw">PARTITION BY</span> job_id <span class="kw">ORDER BY</span> run_start
+                 <span class="kw">ROWS BETWEEN UNBOUNDED PRECEDING AND</span> 1 <span class="kw">PRECEDING</span>) <span class="kw">AS</span> chain_id
+  <span class="kw">FROM</span> ops_demo.job_runs
+  <span class="kw">WHERE</span> run_start &gt;= <span class="kw">current_date</span>() - <span class="kw">INTERVAL</span> 90 DAYS
+)
+<span class="kw">SELECT</span> workspace_id, job_id, chain_id,
+       <span class="kw">COUNT_IF</span>(result_state &lt;&gt; <span class="st">'SUCCESS'</span>) <span class="kw">AS</span> failures,
+       <span class="kw">MAX</span>(result_state = <span class="st">'SUCCESS'</span>)      <span class="kw">AS</span> healed,
+       <span class="kw">MIN</span>(run_start)                      <span class="kw">AS</span> first_fail_at
+<span class="kw">FROM</span> runs
+<span class="kw">GROUP BY ALL</span>
+<span class="kw">HAVING</span> failures &gt; 0;</code></pre>
+      </div>
+      <div>
+<pre><code><span class="cm"># 2. Fit inputs, then simulate (Python)</span>
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+s = spark.table(<span class="st">"ops_demo.failure_chains"</span>).toPandas()
+
+flaky = s[s.healed]                    <span class="cm"># healed on retry</span>
+p_hat = 1 / (1 + (flaky.failures - 1).mean())  <span class="cm"># geometric MLE</span>
+q_hat = 1 - s.healed.mean()            <span class="cm"># share of real breaks</span>
+gaps = s.sort_values(<span class="st">"first_fail_at"</span>) \
+        .first_fail_at.diff().dt.total_seconds() / 60
+lam_hat = 1 / gaps.mean()              <span class="cm"># exponential MLE</span>
+
+rng = np.random.default_rng(1102)
+<span class="kw">def</span> false_pages(N, weeks=2000):
+    k = rng.poisson(lam_hat * 10080 * (1 - q_hat), weeks)
+    u = rng.random(k.sum())
+    F = np.floor(np.log1p(-u) / np.log1p(-p_hat))
+    <span class="kw">return</span> (F &gt;= N).sum() / weeks
+print({N: false_pages(N) <span class="kw">for</span> N <span class="kw">in</span> range(1, 7)})</code></pre>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- ========== 7. FOOTER ========== -->
+<footer>
+  <div class="wrap">
+    <p><b>Unofficial concept prototype by Shriya Shekatkar. All data is simulated. Not affiliated with any company.</b></p>
+    <p><a href="https://shriyashekatkar25-byte.github.io/apm-lab/">← Back to the APM Lab gallery</a></p>
+    <div class="credits">Design inspired by:
+      <a href="https://www.pinterest.com/pin/1144336586610336771/" target="_blank" rel="noopener">“MONEY IS COMING” by KAPOSTELOUN</a> ·
+      <a href="https://www.pinterest.com/pin/982488474976370748/" target="_blank" rel="noopener">“2026 manifesting” by slaywithsona</a> ·
+      <a href="https://www.pinterest.com/pin/921689879977602179/" target="_blank" rel="noopener">iridescent glitter-hands painting by ৻ꪆ</a> ·
+      <a href="https://www.pinterest.com/pin/898960775641848480/" target="_blank" rel="noopener">“kiana's page” (no mud no lotus) by kiana</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const G = {fp:2.0, on60:0.95, noisy:0.10, night:0.75, ttp:45, noisyCut:10};
+const FAST_RECALL=0.60, FAST_FP=0.02, DETECT=5, WEEK=10080;
+
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+// inverse-CDF samplers
+const expo=(u,mean)=>-mean*Math.log(1-u);
+const geomFail=(u,p)=>Math.floor(Math.log(1-u)/Math.log(1-p));
+
+function params(){return{N:+$('N').value,ws:+$('ws').value,lam:+$('lam').value,q:+$('q').value,p:+$('p').value,rt:+$('rt').value,bo:+$('bo').value,fast:$('fast').checked,seed:(+$('seed').value)|0};}
+
+function simulate(P,weeks,seed,keep){
+  const r=mulberry32(seed);
+  const meanGap=1440/(P.lam*P.ws);
+  let fpTot=0,nightFp=0,noisy=0,healDelay=0,healN=0;
+  const ttps=[],hist=new Array(31).fill(0),sample=[];
+  for(let w=0;w<weeks;w++){
+    let t=0,pages=0;
+    while(true){
+      t+=expo(r(),meanGap); if(t>WEEK)break;
+      const real=r()<P.q, hour=(t/60)%24, night=hour>=22||hour<7;
+      let kind,ttp=null;
+      if(P.fast&&real&&r()<FAST_RECALL){kind='real';ttp=DETECT;}
+      else if(P.fast&&!real&&r()<FAST_FP){kind='false';}
+      else if(real){let s=DETECT;for(let i=0;i<P.N;i++)s+=expo(r(),P.rt)+(i<P.N-1?P.bo:0);kind='real';ttp=s;}
+      else{const F=geomFail(r(),P.p); if(F>=P.N)kind='false'; else{kind='heal';let d=0;for(let i=0;i<F;i++)d+=expo(r(),P.rt)+P.bo;healDelay+=d;healN++;}}
+      if(kind==='false'){fpTot++;pages++;if(night)nightFp++;}
+      if(kind==='real'){pages++;ttps.push(ttp);}
+      if(keep&&w===0)sample.push({t,kind});
+    }
+    if(pages>G.noisyCut)noisy++;
+    hist[Math.min(pages,30)]++;
+  }
+  ttps.sort((a,b)=>a-b);
+  const med=ttps.length?ttps[Math.floor(ttps.length/2)]:0;
+  const on60=ttps.length?ttps.filter(x=>x<=60).length/ttps.length:1;
+  return{fp:fpTot/weeks,night:nightFp/weeks,noisy:noisy/weeks,med,on60,hist,sample,
+         healDelay:healN?healDelay/healN:0,realPerWeek:ttps.length/weeks};
+}
+function exactFp(P){const n=P.lam*P.ws*7*(1-P.q);const tail=Math.pow(1-P.p,P.N);return P.fast?n*(FAST_FP+(1-FAST_FP)*tail):n*tail;}
+function passes(R){return{fp:R.fp<=G.fp,on60:R.on60>=G.on60,noisy:R.noisy<=G.noisy,night:R.night<=G.night,ttp:R.med<=G.ttp};}
+
+/* ---------- KPI badges ---------- */
+const spark='<svg class="spark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1 L14 10 L23 12 L14 14 L12 23 L10 14 L1 12 L10 10Z" fill="#fff" opacity=".9"/></svg>';
+function badge(lbl,val,tgt,ok){return `<div class="badge">${spark}<div class="lbl">${lbl}</div><div class="val">${val}</div><div class="tgt">${tgt}</div><span class="pill ${ok?'ok':'bad'}">${ok?'✓ within guardrail':'✗ breaks guardrail'}</span></div>`;}
+function renderKpis(R,P){
+  const ok=passes(R);
+  $('kpis').innerHTML=
+    badge('Median time-to-human',Math.round(R.med)+' min','target ≤ 45 min',ok.ttp)+
+    badge('False pages / week',R.fp.toFixed(2),'exact: '+exactFp(P).toFixed(2)+' · cap 2.0',ok.fp)+
+    badge('Real breaks paged ≤ 60 min',(R.on60*100).toFixed(1)+'%','floor 95%',ok.on60)+
+    badge('Noisy weeks',(R.noisy*100).toFixed(1)+'%','more than 10 pages · cap 10%',ok.noisy)+
+    badge('Night false pages / wk',R.night.toFixed(2),'10 p.m.–7 a.m. · cap 0.75',ok.night);
+}
+
+/* ---------- Pond week canvas ---------- */
+function lotus(ctx,x,y,s,fill,edge){
+  ctx.save();ctx.translate(x,y);
+  for(let i=-2;i<=2;i++){ctx.save();ctx.rotate(i*0.42);ctx.beginPath();ctx.moveTo(0,0);ctx.bezierCurveTo(-s*.45,-s*.5,-s*.25,-s*1.1,0,-s*1.25);ctx.bezierCurveTo(s*.25,-s*1.1,s*.45,-s*.5,0,0);ctx.fillStyle=fill;ctx.fill();ctx.strokeStyle=edge;ctx.lineWidth=1.2;ctx.stroke();ctx.restore();}
+  ctx.restore();
+}
+function pad(ctx,x,y,s){ctx.beginPath();ctx.moveTo(x,y);ctx.arc(x,y,s,0.35,Math.PI*2-0.05);ctx.closePath();ctx.fillStyle='#7f9c62';ctx.fill();ctx.strokeStyle='#4f6c3f';ctx.lineWidth=1.5;ctx.stroke();}
+let anim=null;
+function drawWeek(sample){
+  const c=$('week'),ctx=c.getContext('2d'),W=c.width,H=c.height,L=64,R=16,T=34,B=16,rowH=(H-T-B)/7;
+  const xOf=m=>L+(m%1440)/1440*(W-L-R);
+  function base(){
+    ctx.clearRect(0,0,W,H);ctx.fillStyle='#132018';ctx.fillRect(0,0,W,H);
+    // night bands
+    ctx.fillStyle='rgba(243,165,184,0.10)';
+    ctx.fillRect(L,T,(7/24)*(W-L-R),H-T-B);ctx.fillRect(L+(22/24)*(W-L-R),T,(2/24)*(W-L-R),H-T-B);
+    ctx.font='600 20px "DM Sans",sans-serif';ctx.fillStyle='#e9ecd9';ctx.textAlign='right';
+    const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    for(let d=0;d<7;d++){const y=T+rowH*(d+.5);ctx.fillText(days[d],L-10,y+7);ctx.strokeStyle='rgba(243,239,198,0.12)';ctx.beginPath();ctx.moveTo(L,T+rowH*(d+1));ctx.lineTo(W-R,T+rowH*(d+1));ctx.stroke();}
+    ctx.textAlign='center';for(const h of [0,6,12,18,24]){const x=L+h/24*(W-L-R);ctx.fillText(h===24?'24h':h+'h',x,24);}
+  }
+  function item(e){
+    const d=Math.floor(e.t/1440),x=xOf(e.t),y=T+rowH*(d+.5)+((e.t*7919)%17-8);
+    if(e.kind==='heal')pad(ctx,x,y,9);
+    else if(e.kind==='false'){lotus(ctx,x,y+12,24,'#f3a5b8','#ffd4de');ctx.beginPath();ctx.arc(x,y-2,22,0,Math.PI*2);ctx.strokeStyle='rgba(255,212,222,.75)';ctx.lineWidth=2;ctx.stroke();}
+    else lotus(ctx,x,y+14,28,'#f3efc6','#e9c27b');
+  }
+  if(anim)cancelAnimationFrame(anim);
+  const ordered=sample.slice().sort((a,b)=>(a.kind==='heal'?0:1)-(b.kind==='heal'?0:1)||a.t-b.t);
+  if(reduce){base();ordered.forEach(item);return;}
+  const start=performance.now(),dur=2200;
+  (function frame(now){const k=Math.min(1,(now-start)/dur);base();const n=Math.ceil(k*ordered.length);for(let i=0;i<n;i++)item(ordered[i]);if(k<1)anim=requestAnimationFrame(frame);})(start);
+}
+
+/* ---------- Histogram ---------- */
+function drawHist(hist,weeks){
+  const c=$('hist'),ctx=c.getContext('2d'),W=c.width,H=c.height,L=60,R=16,T=20,B=48;
+  ctx.clearRect(0,0,W,H);ctx.fillStyle='#132018';ctx.fillRect(0,0,W,H);
+  let last=hist.length-1;while(last>10&&hist[last]===0)last--;
+  const n=last+1,bw=(W-L-R)/n,max=Math.max(...hist);
+  ctx.font='500 18px "DM Sans",sans-serif';ctx.fillStyle='#e9ecd9';ctx.textAlign='center';
+  for(let i=0;i<n;i++){const h=hist[i]/max*(H-T-B);const x=L+i*bw;
+    ctx.fillStyle=i>G.noisyCut?'#f3a5b8':'#7f9c62';ctx.fillRect(x+2,H-B-h,bw-4,h);
+    if(i%2===0||n<16){ctx.fillStyle='#e9ecd9';ctx.fillText(i===30?'30+':i,x+bw/2,H-B+22);}}
+  ctx.fillText('pages in the week',L+(W-L-R)/2,H-6);
+  const xc=L+(G.noisyCut+1)*bw;ctx.setLineDash([8,6]);ctx.strokeStyle='#f3efc6';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(xc,T);ctx.lineTo(xc,H-B);ctx.stroke();ctx.setLineDash([]);
+  ctx.save();ctx.translate(20,(H-B)/2+10);ctx.rotate(-Math.PI/2);ctx.fillText('weeks',0,0);ctx.restore();
+}
+
+/* ---------- Sweep over N ---------- */
+let sweepCache=null;
+function sweep(P){
+  const out=[];for(let N=1;N<=8;N++){const R=simulate(Object.assign({},P,{N}),600,P.seed+N*101,false);out.push({N,R,ok:Object.values(passes(R)).every(Boolean)});}return out;
+}
+function drawSweep(S,curN){
+  const W=600,H=260,L=46,Rm=46,T=16,B=36,svg=$('sweep');
+  const x=N=>L+(N-1)/7*(W-L-Rm);
+  const fmax=Math.max(4,...S.map(s=>s.R.fp))*1.1;
+  const yF=v=>T+(1-v/fmax)*(H-T-B), yO=v=>T+(1-v)*(H-T-B);
+  let g=`<rect width="${W}" height="${H}" rx="8" fill="#132018"/>`;
+  g+=`<line x1="${L}" x2="${W-Rm}" y1="${yF(G.fp)}" y2="${yF(G.fp)}" stroke="#f3a5b8" stroke-dasharray="5 5" opacity=".6"/>`;
+  g+=`<line x1="${L}" x2="${W-Rm}" y1="${yO(G.on60)}" y2="${yO(G.on60)}" stroke="#e9c27b" stroke-dasharray="5 5" opacity=".6"/>`;
+  g+=`<rect x="${x(curN)-14}" y="${T}" width="28" height="${H-T-B}" fill="#f3efc6" opacity=".08" rx="6"/>`;
+  g+=`<polyline fill="none" stroke="#f3a5b8" stroke-width="3" points="${S.map(s=>x(s.N)+','+yF(s.R.fp)).join(' ')}"/>`;
+  g+=`<polyline fill="none" stroke="#e9c27b" stroke-width="3" points="${S.map(s=>x(s.N)+','+yO(s.R.on60)).join(' ')}"/>`;
+  S.forEach(s=>{g+=`<circle cx="${x(s.N)}" cy="${yF(s.R.fp)}" r="4.5" fill="#f3a5b8"/><circle cx="${x(s.N)}" cy="${yO(s.R.on60)}" r="4.5" fill="#e9c27b"/>`;
+    if(s.ok)g+=`<circle cx="${x(s.N)}" cy="${H-B+14}" r="9" fill="none" stroke="#f3efc6" stroke-width="2"/>`;
+    g+=`<text x="${x(s.N)}" y="${H-B+19}" text-anchor="middle" font-size="13" fill="#e9ecd9" font-family="DM Sans">${s.N}</text>`;});
+  g+=`<text x="10" y="${T+10}" font-size="12" fill="#f3a5b8" font-family="DM Sans">${fmax.toFixed(1)}</text><text x="10" y="${H-B}" font-size="12" fill="#f3a5b8" font-family="DM Sans">0</text>`;
+  g+=`<text x="${W-40}" y="${T+10}" font-size="12" fill="#e9c27b" font-family="DM Sans">100%</text><text x="${W-40}" y="${H-B}" font-size="12" fill="#e9c27b" font-family="DM Sans">0%</text>`;
+  g+=`<text x="${W/2}" y="${H-2}" text-anchor="middle" font-size="12" fill="#e9ecd9" font-family="DM Sans">N = failed attempts before paging</text>`;
+  svg.innerHTML=g;
+}
+
+/* ---------- Memo ---------- */
+function memo(P,R,S){
+  const ok=S.filter(s=>s.ok), cur=passes(R);
+  const rec=ok.length?ok[0]:null; // smallest passing N = fastest page
+  const fails=Object.entries(cur).filter(([k,v])=>!v).map(([k])=>({fp:'false pages',on60:'on-time paging',noisy:'noisy weeks',night:'night false pages',ttp:'time-to-human'})[k]);
+  const findings=Math.round(P.lam*P.ws*7);
+  let decision,vp,risk,plan,next;
+  if(rec){
+    decision=`Ship <b>N = ${rec.N}</b> as the default${P.fast?', with the deterministic-diagnosis fast lane on':''}. It is the fastest setting that clears every guardrail in this scenario.`+(rec.N!==P.N?` The slider is at N = ${P.N}, which ${fails.length?'breaks '+fails.join(', '):'also passes but pages slower'}.`:'');
+    vp=`We'll page on-call after ${rec.N} failed ${rec.N===1?'attempt':'attempts'}${P.fast?' (or immediately when the agent is sure the cause is a code or schema change)':''}, which gets a human on real breaks in about ${Math.round(rec.R.med)} minutes while keeping false pages near ${rec.R.fp.toFixed(1)} a week.`;
+  }else{
+    const best=S.reduce((a,b)=>Object.values(passes(b.R)).filter(Boolean).length>Object.values(passes(a.R)).filter(Boolean).length?b:a);
+    decision=`<b>Do not ship a single N yet.</b> No value from 1 to 8 clears every guardrail here. The closest is N = ${best.N}. The lever is not N: ${P.fast?'shorten runtimes or retry backoff, or raise fast-lane recall':'turn on the fast lane so certain breaks skip retries'}.`;
+    vp=`A retry count alone can't make this customer both quiet and fast; we need the agent's diagnosis to do the triage, so I'm asking for two weeks to prove fast-lane precision before we set a default.`;
+  }
+  risk=`<ul><li><b>Fast-lane precision.</b> If the agent mislabels more than 2% of flaky failures as deterministic, false pages rise by about ${(findings*(1-P.q)*0.01).toFixed(1)} per week for every extra point.</li><li><b>Correlated failures.</b> An upstream outage fails many jobs at once. This model treats findings as independent, so paging must group by root cause before counting.</li><li><b>Silent heals still cost freshness.</b> Flaky jobs that heal still delay tables by about ${Math.round(R.healDelay)} minutes on average; that belongs in the inbox, not the pager.</li></ul>`;
+  plan=`<ol><li>Two weeks in <b>shadow mode</b> on 20 design-partner workspaces: log "would have paged" at N = 1 to 6, page nobody.</li><li>Refit λ, p, runtime and fast-lane precision from those logs; rerun this simulation.</li><li>Turn on for 10% of new workspaces, then 50%, then 100%, one step per week if guardrails hold.</li><li><b>Kill switch:</b> fall back to inbox-only if false pages exceed 2.0 per on-call week for two weeks in a row.</li></ol>`;
+  next=`Book 30 minutes with the agent research lead to agree on how fast-lane precision is measured, and with three design-partner on-call leads to sanity-check the 2-per-week false-page cap.`;
+  $('memo').innerHTML=`<h3>To: VP, Data Engineering · Re: when the ops agent pages</h3>
+  <p style="margin:0;color:var(--ink-soft);font-size:14px">Scenario: ${P.ws} workspaces per on-call, about ${findings} findings a week, ${Math.round(P.q*100)}% real breaks, seed ${P.seed}. All numbers simulated.</p>
+  <dl><dt>Decision</dt><dd>${decision}</dd>
+  <dt>Evidence</dt><dd>At the slider setting N = ${P.N}: median time-to-human <b>${Math.round(R.med)} min</b>, <b>${(R.on60*100).toFixed(1)}%</b> of real breaks paged within an hour, <b>${R.fp.toFixed(2)}</b> false pages a week (the exact formula says ${exactFp(P).toFixed(2)}, so the simulation is calibrated), ${(R.noisy*100).toFixed(1)}% noisy weeks, ${R.night.toFixed(2)} false pages a week at night. Passing N values: ${ok.length?ok.map(s=>s.N).join(', '):'none'}.</dd>
+  <dt>Risks</dt><dd>${risk}</dd>
+  <dt>Rollout plan</dt><dd>${plan}</dd>
+  <dt>Next step</dt><dd>${next}</dd></dl>
+  <div class="vp">What I'd tell the VP in one sentence: ${vp}</div>`;
+}
+
+/* ---------- Wire up ---------- */
+const fmt={N:v=>v,ws:v=>v,lam:v=>(+v).toFixed(2),q:v=>Math.round(v*100)+'%',p:v=>Math.round(v*100)+'%',rt:v=>v,bo:v=>v};
+let timer=null;
+function run(){
+  for(const k in fmt)$('o'+k).textContent=fmt[k]($(k).value);
+  const P=params();
+  const R=simulate(P,2000,P.seed,true);
+  const S=sweep(P);
+  renderKpis(R,P);drawWeek(R.sample);drawHist(R.hist,2000);drawSweep(S,P.N);memo(P,R,S);
+}
+function schedule(){clearTimeout(timer);timer=setTimeout(run,60);}
+['N','ws','lam','q','p','rt','bo','fast','seed'].forEach(id=>$(id).addEventListener('input',schedule));
+$('reroll').addEventListener('click',()=>{$('seed').value=Math.floor(Math.random()*90000)+1000;run();});
+if(document.fonts&&document.fonts.ready){document.fonts.ready.then(run);}else run();
+})();
+</script>
+</body>
+</html>
