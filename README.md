@@ -47,5 +47,10 @@ All visuals are original SVG, CSS and canvas drawings. No pin images are used.
 - [Iridescent glitter-hands painting by ৻ꪆ](https://www.pinterest.com/pin/921689879977602179/): KPI badges. Lilac, blush, gold and aqua iridescent gradient with sparkle stars.
 - [“kiana's page” (no mud no lotus) by kiana](https://www.pinterest.com/pin/898960775641848480/): simulation room. Dark grainy pond green, pink lotus marks, cream condensed caps.
 
+## Related work
+- Same area: [leash-length](https://github.com/shriyashekatkar25-byte/leash-length) (agent time limits, inverse CDF), [runaway-tab](https://shriyashekatkar25-byte.github.io/runaway-tab/), [fresh-enough](https://github.com/shriyashekatkar25-byte/fresh-enough), [claim-check-clock](https://github.com/shriyashekatkar25-byte/claim-check-clock)
+- Method notes: [say-cheese-monte-carlo](https://github.com/shriyashekatkar25-byte/say-cheese-monte-carlo) (Ch1–3), [roll-the-dice-math](https://github.com/shriyashekatkar25-byte/roll-the-dice-math) (Ch1)
+- Everything else: [APM Lab gallery](https://shriyashekatkar25-byte.github.io/apm-lab/) · [GitHub profile](https://github.com/shriyashekatkar25-byte)
+
 ---
 Unofficial concept prototype by Shriya Shekatkar. All data is simulated. Not affiliated with any company.
